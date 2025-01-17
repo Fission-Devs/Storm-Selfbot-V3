@@ -10,6 +10,7 @@ import os
 import sys
 import random
 import pyjokes
+import psutil
 from dhooks import Webhook
 from discord.ext import commands, tasks
 from googletrans import Translator, LANGUAGES
@@ -28,11 +29,13 @@ print("""
 
 """)
 
-token = getpass.getpass("Give Your ID Token: ")
-message = input("What do you want to spam?: ")
-reason = input("Give the reasons to put on audits: ")
+token = input("Your Token: ")
+message = input("Your Spamming Message: ")
+reason = input("What is reason?: )
 
 client = commands.Bot(command_prefix=">", self_bot=True)
+
+start_time = None
 
 @client.event
 async def on_ready():
@@ -112,6 +115,7 @@ crypto_help = """**# Crypto Commands**
 
 nuking_help = """**# Nuking Commands**
 - `>wizz`           : Fully nuke server
+- `>stop_wizz`      : Stop nuking
 - `>ban_everyone`   : Ban all members in the server
 - `>massban`        : Ban multiple members at once
 """
@@ -175,6 +179,9 @@ async def hook(ctx, user: discord.Member, *, message):
     WebhookObject.send(message)
     WebhookObject.delete()
     
+# Flag to control the spam loop
+spams = False
+
 def ssspam(webhook_url):
     while spams:
         data = {'content': message}
@@ -208,9 +215,9 @@ async def wizz(ctx):
         # Edit guild
         try:
             await ctx.guild.edit(
-                name='Server Got Nuked',
-                description='Nuked Using Storm Selfbot here you can download https://github.com/rifatgamingop',
-                reason=reason,
+                name='XENON RUNZ CORD',
+                description='XENON RUNZ CORD',
+                reason="XENON RUNZ CORD",
                 icon=None,
                 banner=None
             )
@@ -221,7 +228,7 @@ async def wizz(ctx):
         channels = []
         for i in range(5):
             try:
-                channel = await ctx.guild.create_text_channel(name='nuked by storm selfbot')
+                channel = await ctx.guild.create_text_channel(name='nuked by xenon')
                 channels.append(channel)
                 await asyncio.sleep(1)  # Delay to prevent hitting rate limits
             except Exception as e:
@@ -242,6 +249,16 @@ async def wizz(ctx):
 
     except Exception as e:
         print(f"Error in wizz command: {e}")
+
+# Stop the spam
+@client.command()
+async def stop_spam(ctx):
+    global spams
+    if spams:
+        spams = False
+        await ctx.send("Spam has been stopped.")
+    else:
+        await ctx.send("No active spam process to stop.")
 
 def get_ltc_balance(address):
     """Retrieve the LTC balance for a given address from BlockCypher API."""
@@ -409,11 +426,39 @@ async def dm(ctx, *, message: str):
     except:
         await ctx.send(f"Successfully dmed {h} members in {ctx.guild.name}")
 
-
 @client.command()
 async def ping(ctx):
-    latency = round(client.latency * 1000)
-    await ctx.send(f"Ping: {latency}ms")
+    """Enhanced ping command with proper CPU usage."""
+    global start_time
+
+    # Check if start_time is None and initialize if necessary
+    if start_time is None:
+        start_time = time.time()  # Set it if not already set
+
+    # Get API Latency
+    api_latency = round(client.latency * 1000)  # in ms
+    
+    # Get Host Latency (time since the bot started)
+    if start_time:
+        host_latency = round(time.time() - start_time)  # in seconds
+    else:
+        host_latency = "N/A"  # Fallback if start_time is still None
+    
+    # Get Uptime
+    uptime_seconds = time.time() - start_time
+    uptime = str(time.strftime("%H-%M-%S hours", time.gmtime(uptime_seconds)))
+    
+    # Get CPU usage
+    cpu_usage = psutil.cpu_percent(interval=1)  # in percentage
+    
+    # Send the ping stats
+    await ctx.send(f"""
+```js
+API Latency: {api_latency}ms
+Host Latency: {host_latency}ms
+Uptime: {uptime}
+CPU Usage: {cpu_usage}%
+```""")
 
 @client.command()
 async def spam(ctx, amount: int, *, message):
@@ -657,9 +702,15 @@ opponent = None
 @client.command()
 async def autoreply(ctx, user: discord.User):
     global auto_reply, opponent
-    await ctx.message.delete()  # Delete the command message
+    
+    # Check if user is already in a channel
+    if user.bot:
+        await ctx.send("I can't autoreply to a bot!")
+        return
+    
+    # Set the opponent for the autoreply
+    opponent = user
     auto_reply = True  # Enable auto-reply
-    opponent = user  # Set the opponent
     await ctx.send(f"Auto-reply is now ON for {user.mention}!", delete_after=5)
 
 @client.command()
@@ -673,22 +724,30 @@ async def stopreply(ctx):
 # Event listener to auto-reply to messages from the opponent
 @client.event
 async def on_message(message):
-    global auto_reply, opponent, auto_react, reaction_emoji
+    global auto_reply, opponent
     
-    # Auto-reply functionality
-    if auto_reply and opponent and message.author == opponent and not message.author.bot:
-        # Example auto-replies
+    # Skip if it's from a bot
+    if message.author.bot:
+        return
+
+    # Check if auto-reply is enabled and if the message is from the opponent
+    if auto_reply and opponent and message.author == opponent:
+        # Predefined list of auto-replies
         replies = [
-            "hey yo u ugly grangky dork ass nigga",
-            "ur looking so shit",
-            "ong ur lifeless ur a discord crusader alfronzo",
-            "alexander fucked ur momma with japanese katana"
+            "hey yo u ugly grangky dork ass",
+            "ur looking so bad",
+            "you've got no life",
+            "your momma's a joke",
+            "You are as absurd as an anal ill boring ton of goatish rude dreadful pony goo",
+            "You are as stinky as an apathetic grotesque gruesome mass of questionable puny anglerfish excretions",
+            "You are as awful as a gruesome fuckload of sickening idiotic filthy monkey toenails",
+            "god created u like hogwarts",
+            "god hates u son"
         ]
         
-        # Send a random auto-reply from the list
-        import random
-        reply = random.choice(replies)
-        await message.channel.send(reply)
+        # Join the replies with newlines and send as a reply
+        response = random.choice(replies)
+        await message.reply(response)  # This sends a reply to the user's message
     
     # Auto-react functionality
     if auto_react and reaction_emoji and message.author == client.user:
@@ -845,9 +904,90 @@ async def snipe(ctx):
 
 @client.command()
 async def die(ctx):
+    await ctx.message.delete()  # Delete the user's command message
     for i in range(1, 11):
         await ctx.send(str(i))
         await asyncio.sleep(0.5)  # Adding delay to make it feel more natural
-    await ctx.send("Died Lmao")
+    await ctx.send("Die lmao")
+    
+@client.command(name='first_message', aliases=['fm'])
+async def first_message(ctx, channel: discord.TextChannel = None):
+    """Get the first message in a specified channel or DM."""
+    
+    # Check if the command is used in a DM
+    if isinstance(ctx.channel, discord.DMChannel):
+        try:
+            first_message = await ctx.channel.history(oldest_first=True, limit=1).flatten()
+            if first_message:
+                msg = first_message[0]
+                await ctx.send(
+                    f"**First Message in this DM:**\n"
+                    f"Content: {msg.content or '[No content]'}\n"
+                    f"Author: {msg.author.name}#{msg.author.discriminator}\n"
+                    f"Date: {msg.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+            else:
+                await ctx.send("No messages found in this DM.")
+        except discord.HTTPException as e:
+            await ctx.send(f"An error occurred: {str(e)}")
+
+    # If the command is used in a guild channel
+    else:
+        channel = channel or ctx.channel  # Use the current channel if none is specified
+        try:
+            first_message = await channel.history(oldest_first=True, limit=1).flatten()
+            if first_message:
+                msg = first_message[0]
+                await ctx.send(
+                    f"**First Message in #{channel.name}:**\n"
+                    f"Content: {msg.content or '[No content]'}\n"
+                    f"Author: {msg.author.name}#{msg.author.discriminator}\n"
+                    f"Date: {msg.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+                )
+            else:
+                await ctx.send(f"No messages found in {channel.mention}.")
+        except discord.Forbidden:
+            await ctx.send("I don't have permission to read messages in that channel.")
+        except discord.HTTPException as e:
+            await ctx.send(f"An error occurred: {str(e)}")
+            
+@client.command()
+async def roast(ctx, member: discord.Member = None):
+    if member is None:
+        member = ctx.author  # Default to roasting the command user if no member is mentioned
+    
+    # Expanded list of roast words for a longer, more intense roast
+    roast_words = [
+        "you", "are", "a", "dumb", "ass", "hole", "fool", "clown", "moron", "noob", 
+        "idiot", "trash", "weak", "loser", "stupid", "useless", "pathetic", "lame", 
+        "annoying", "crybaby", "failure", "broken", "hopeless", "dense", "empty", 
+        "worthless", "irrelevant", "clueless", "incompetent", "embarrassing", "basic", 
+        "awkward", "delusional", "laughable", "miserable", "unoriginal", "cheesy", "cringe", 
+        "unintelligent", "pointless", "horrible", "nonexistent", "ineffective", "flawless", 
+        "insufferable", "ignorant", "patronizing", "untrustworthy", "boring", "decently", 
+        "dull", "unimpressive", "hopeless", "stagnant", "washed", "out", "no-brainer", "losing", 
+        "regretful", "awkward", "annoying", "unwanted", "unimportant", "irrelevant", "pathetic"
+    ]
+    
+    # Send the roast messages (each line will contain 20 words, 10 times)
+    for _ in range(10):  # Send 10 different roasting sequences
+        selected_roast = random.sample(roast_words, 20)  # Select 20 random words for this roast sequence
+        
+        # Delete the user's command message
+        await ctx.message.delete()
+        
+        # Send each word separately in one-by-one messages
+        for word in selected_roast:
+            await ctx.send(word)
+            
+@client.command()
+async def rst(ctx):
+    """Restarts the bot"""
+    await ctx.send("Restarting... Please wait.")
+    print("Bot is restarting...")
+    
+    # Re-run the bot script (effectively restarting it)
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
 
 client.run(token, bot=False)

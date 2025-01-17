@@ -31,7 +31,7 @@ print("""
 
 token = input("Your Token: ")
 message = input("Your Spamming Message: ")
-reason = input("What is reason?: )
+reason = input("What is reason?: ")
 
 client = commands.Bot(command_prefix=">", self_bot=True)
 
